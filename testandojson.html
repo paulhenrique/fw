@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Frozen Waves</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta charset="utf-8">
+	<link rel="manifest" href="manifest.json">
+
+	<link rel="stylesheet" type="text/css" href="css/c3.min.css">
+	<link rel="stylesheet" type="text/css" href="css/estilo.css">
+</head>
+<body class="">
+	<div id="chart">
+		
+	</div>
+</body>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/d3.min.js"></script>
+<script type="text/javascript" src="js/c3.min.js"></script>
+<script type="text/javascript">
+	var col1 = ['col1'],
+	col2 = ['col2'],
+	eixoX	 = ['x'];
+	$.getJSON("./json/teste2.json", function (resultado) {
+
+		$.each(resultado, function (index, value){
+				// console.log("index:"+index+"  value: "+value);
+				
+				var output = Math.floor(index);
+				// for(var i = 0; i<10; i++){
+				// 	output += index[i];
+
+				// }
+				
+				eixoX.push(output);
+				col1.push(this[0]);
+				col2.push(this[1]);
+			});
+		console.log(eixoX);
+		var chart = c3.generate({
+			data: {
+				x: 'x',
+				columns:[
+				eixoX,
+				col1,
+				col2
+				]
+			},
+			axis: {
+				x: {
+					tick: {
+						values: eixoX,
+						rotate:45,
+						multiline: true
+					},
+					label: {
+						text: 'Teeeeeeste',
+						position: 'outer-center'
+
+					}
+				}
+			},
+			grid: {
+				x: {
+					show: true
+				},
+				y: {
+					show: true
+				}
+			},
+			legend: {
+				show: false
+			},
+			point: {
+				show: false
+			}
+		});
+		
+	});
+
+	
+		// var chart = c3.generate({
+		// 	data: {
+		// 		columns:[
+
+		// 		],
+		// 		type:'spline'
+		// 	}
+		// });
+	</script>
+	</html>
