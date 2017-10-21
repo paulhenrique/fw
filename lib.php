@@ -6,7 +6,7 @@ function alert($mensagem){
 	function setAlert($page, $NumErro){ //Setar Alertas de erro e avisos via Get nas páginas
 		header("location:".$page."?alert=".$NumErro."");
 		// echo "<script>location.href='".$page."?alert=".$NumErro."'</script>";
-}
+	}
 
 function getAlert(){  //Verificar erros de acordo com o número
 	if (isset($_GET["alert"])) {
@@ -122,7 +122,7 @@ function listChart(){
 	$result = mysqli_query($conn,"SELECT * FROM charts WHERE idAutor=".$_SESSION["usuario"]." ");
 	if ($result->num_rows > 0) {
 		$cont = 0;
-		while($row = $result->fetch_assoc()) {
+		while($row = $result->fetch_assoc()) {	
 			if ($cont == 0) {
 				echo "<a href='graph.php?graph=".$row['id']."' class='btn-PreviewGraph' ><li class='list-group-item list-graph active'>".$row['titulo']."</li></a>";
 				$cont ++;
@@ -138,4 +138,17 @@ function listChart(){
 	$conn->close();
 }
 
+function listCharts(){
+	$types = array('json');
+	if ($handle = opendir('users/'.$_SESSION["user_name"].'/')) {
+		while ($entry = readdir( $handle ) ) {
+			$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION) );
+			if(in_array($ext, $types)) 
+				echo "<a class='btn-PreviewGraph' data-file='".$entry."'><li class='list-group-item list-graph'>".pathinfo($entry, PATHINFO_FILENAME)."</li></a>";
+				// echo $entry."<br>";
+		}
+		closedir($handle);
+	}    
+	echo "<script>console.log('ata')</script>";
+}
 ?>

@@ -74,17 +74,29 @@ i.material-icons.big-icon {
 	background-size: 95%;
 	background-repeat: no-repeat;
 }
-.monitor{
-	background-image: url("../img/monitor.png");
-	margin:0 auto;
-	max-width: 700px;
-	width: 100%;
-	min-height: 700px;
-	height: 100%;
-	background-size: 100%;
-	background-repeat: no-repeat;
+.monitor {
+    background-image: url("../img/monitor_start.png");
+    margin: 0 auto;
+    max-width: 700px;
+    width: 100%;
+    min-height: 700px;
+    height: 100%;
+    background-size: 100%;
+    position: relative;
+    background-repeat: no-repeat;
 }
-
+.monitor::before {
+    content: "";
+    background: url("../img/exemp2.gif");
+    position: absolute;
+    left: 32px;
+    top: 28px;
+    width: 91%;
+    height: 100%;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    z-index: -1;
+}
 @media (max-width: 767px) { 
 	.monitor{
 		min-height: 300px;

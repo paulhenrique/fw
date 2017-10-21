@@ -72,7 +72,9 @@ if (!isset($_SESSION["user_id"])){
 				<div class="col-12 col-md-6">
 					<h1 class="f300">Chart List</h1>
 					<ul class="list-group mt-3 listChart">
-						<?php listChart(); ?>
+						<?php 
+						listCharts();
+						?>
 					</ul>
 				</div>
 			</div>
@@ -127,7 +129,7 @@ if (!isset($_SESSION["user_id"])){
 										</div>
 										<div class="form-check">
 											<label class="form-check-label">
-												<input class="form-check-input" type="radio" name="opt" value="3" >
+												<input class="form-check-input" type="radio" name="opt" value="10" >
 												GNM-Magnético
 											</label>
 										</div>
@@ -176,20 +178,42 @@ if (!isset($_SESSION["user_id"])){
 <script type="text/javascript" src="view/js/install.js"></script>
 <script type="text/javascript" src="service-worker.js"></script>
 <script type="text/javascript">
-	// var cont = <?php getLastChart(1); ?>;
-	
-	var chart = c3.generate({
-		data: {
-			url:"./json/teste1.json",
-			type: 'spline'
-		}
+	function gerarGrafico(file){
+		var col1 = ['col1'],
+		col2 = ['col2'];
+		var user = "<?php echo $_SESSION["user_name"]; ?>";	
+		$.getJSON("./users/"+user+"/"+file+"", function (resultado) {
+		// 	console.log(resultado[0]);
+		// console.log(resultado[1]);
+		$.each(resultado[1], function (index, value){	
+				// console.log("index:"+index+"  value: "+value);
+				// console.log(index)
+				console.log(value);
+				col2.push(value[0]);
+				col1.push(value[1]);
+				
+			});
+		var chart = c3.generate({
+			data: {
+				columns:[
+				col1,
+				col2
+				]
+			}
+		});
 	});
+	};
 
-// var cont = lerJson("./json/teste1.json");
-// function lerJson(url){
-// 	$.getJSON(url, function(dados){		
-// 		 return dados[0];
-// 	});
-// }
+	$(".btn-PreviewGraph").on("click", function (e) {
+		e.preventDefault();
+		$(".list-graph").removeClass("active");
+		$(this).children("li").addClass("active");
+		var file = $(this).attr("data-file");
+		gerarGrafico(file);
+		console.log("teste");
+		// $("#chart").fadeOut("slow");
+		// $("#chart").load(location, " #chart").fadeIn("slow");
+		// $(".descChart").load(location ," #descChart");
+	});
 </script>
 </html>

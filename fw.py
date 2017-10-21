@@ -80,7 +80,7 @@ def gerar_arquivo_json(nome_arquivo, matriz, titulos):
     # outfile = open("teste.json", "w")
     #var = json.dump([titulos, matriz], ensure_ascii=False, sort_keys=True, indent=1, separators=(',', ':'))
     data = json.dumps([titulos, matriz], sort_keys=True, indent=4, separators=(',', ':'))
-    print("<script>var nome_arquivo ='"+nome_arquivo+"'; </script>")
+    # print("<script>var nome_arquivo ='"+nome_arquivo+"'; </script>")
     global usuario_sistema
     fd = os.open("users/"+ usuario_sistema + "/" + nome_arquivo, os.O_RDWR|os.O_CREAT )
     arquivo = os.fdopen(fd, "w+")
@@ -1149,7 +1149,7 @@ if __name__=="__main__":
         ## plt.show()
         endall = timer()
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
-        #np.savetxt('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'_'+'.txt'+'IMOC', np.transpose([vBJx,vX]))            
+        #np.savetxt('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'_'+'.json'+'IMOC', np.transpose([vBJx,vX]))            
         titulos = {"x(µm)":"Jn(x)"}
         vetores = dict(zip(vX,vBJx))
         print("prexec json")
@@ -1410,7 +1410,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig1'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig1'+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 9:
         #tipo 1
         #ordem 0
@@ -1492,10 +1492,10 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"z":"[gnmTM(1,±1,0,0,z),gnmTM(1,±1,0,0,z)]"}
         vetores = dict(zip(flin,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores, titulos)
         titulos2 = {"z":"[gnmTM(1,±1,0,0,z),gnmTM(1,±1,0,0,z)]"}
         vetores2 = dict(zip(flin,zip(vgnmTME2,vgnmTMLA2)))
-        gerar_arquivo_json('subplot'+'_'+'gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores2, titulos2)
+        gerar_arquivo_json('subplot'+'_'+'gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores2, titulos2)
     elif choice == 10:
         #tipo = 4
         #ordem = 4
@@ -1556,7 +1556,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig3'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig3'+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 11:
         #tipo = 5
         #ordem = 3
@@ -1611,7 +1611,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"n":"[gnmTME(n,±2,0,0,0),gnmTMLA(n,±2,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig4'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig4'+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 12:
         #tipo 1
         #ordem = 0
@@ -1663,7 +1663,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"n":"[gnmTME(n,0,0.00005,0,0.0003),gnmTMLA(n,0,0.00005,0,0.0003)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig5'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig5'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 13:
         startall = timer()
         #tipo 1
@@ -1717,7 +1717,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"r":"[gnmTME(1,0,r,0,0.0003),gnmTMLA(1,0,r,0,0.0003)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig6'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig6'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 14:
         startall = timer()
         #tipo 1
@@ -1772,7 +1772,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"r":"[gnmTME(200,0,r,0,0.0003),gnmTMLA(200,0,r,0,0.0003)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig7'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig7'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 15:
         vgnmTME = []
         nlist = [1,2,5,10,25,50,100,200]
@@ -1909,7 +1909,7 @@ if __name__=="__main__":
         ## plt.show()
         titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.json', vetores, titulos)
         endall = timer()
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")    
     elif choice == 18:

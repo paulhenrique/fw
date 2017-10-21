@@ -1,4 +1,3 @@
-<script type="text/javascript" src="view/js/jquery.min.js"></script>
 <?php
 session_start();
 
@@ -13,29 +12,13 @@ $comando = 'python fw.py '.$tipo.' '.$step." ".$option." ".$ordem." ".$user;
 echo $comando;
 $retorno_python= shell_exec($comando);
 echo $retorno_python;
-?>
-<script type="text/javascript">
-    function definirVar(variavel){
-        <?php
-            $variavel = definirVariavel("<script>document.write(nome_arquivo)</script>");
-        ?>
-    }
-</script>
-<?php
 
+include "conn.php";
+    $insert = "INSERT into charts (id_tipo_chart, dados, id_user) VALUES ('".$_POST["tipoFW"]."', '".$nome_arquivo."', '".$_SESSION["user_id"]."')";
+    $result = mysqli_query($conn, $insert);        
 
-function definirVariavel($controle){
-    return($controle);
-    
-}
-$nome = definirVariavel("<script>document.write(nome_arquivo)</script>");
-echo $nome;
-// include "conn.php";
-//     $insert = "INSERT into charts (id_tipo_chart, dados, id_user) VALUES ('".$_POST["tipoFW"]."', '".$nome_arquivo."', '".$_SESSION["user_id"]."')";
-//     $result = mysqli_query($conn, $insert);        
-// $nome_arquivo = $_POST["nome_arquivo"];
 if(strpos($retorno_python,"]") !== false)
-    echo "batata";
+    echo "<script>javascript:history.back()</script>";
 else
     echo "string";
 ?>

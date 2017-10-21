@@ -27,15 +27,7 @@ var opts = {
 var target = document.getElementById('foo');
 var spinner = new Spinner(opts).spin(target);
 
-$(".btn-PreviewGraph").on("click", function (e) {
-	e.preventDefault();
-	$(".list-graph").removeClass("active");
-	var location = $(this).attr("href");
-	$(this).children("li").addClass("active");
-	$("#chart").fadeOut("slow");
-	$("#chart").load(location, " #chart").fadeIn("slow");
-	$(".descChart").load(location ," #descChart");
-});
+
 
 $("#processar").on("click", function (e) {
 //	e.preventDefault();
