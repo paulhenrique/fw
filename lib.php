@@ -31,7 +31,7 @@ function checkLogin(){ //checar se a sessão que confirma o login foi criada
 		setAlert("login.php", 3);		
 		die();
 	}else{
-		// header("location:admin.php");
+		header("location:admin.php");
 	}
 }
 function getLastChart($opt){

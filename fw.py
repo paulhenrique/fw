@@ -80,7 +80,7 @@ def gerar_arquivo_json(nome_arquivo, matriz, titulos):
     # outfile = open("teste.json", "w")
     #var = json.dump([titulos, matriz], ensure_ascii=False, sort_keys=True, indent=1, separators=(',', ':'))
     data = json.dumps([titulos, matriz], sort_keys=True, indent=4, separators=(',', ':'))
-    print(nome_arquivo)
+    print("<script>var nome_arquivo ='"+nome_arquivo+"'; </script>")
     global usuario_sistema
     fd = os.open("users/"+ usuario_sistema + "/" + nome_arquivo, os.O_RDWR|os.O_CREAT )
     arquivo = os.fdopen(fd, "w+")
@@ -1153,7 +1153,7 @@ if __name__=="__main__":
         titulos = {"x(µm)":"Jn(x)"}
         vetores = dict(zip(vX,vBJx))
         print("prexec json")
-        print(gerar_arquivo_json('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos))
+        gerar_arquivo_json('BesselJ'+'_'+'r'+str(step)+'.json', vetores, titulos)
 
     elif choice == 2:
         #step = 0.0025
@@ -1198,7 +1198,7 @@ if __name__=="__main__":
         # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"z(mm)":"|Psi(localspot,z*10**(-3),0,0)|²"}
         vetores = dict(zip(vZ,vPsi))
-        gerar_arquivo_json('Psi'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        gerar_arquivo_json('Psi'+'_'+'r'+str(step)+'.json', vetores, titulos)
     elif choice == 3:
         #tipo 8
         #ordem 0

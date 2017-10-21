@@ -6,6 +6,9 @@ body{
 h1, h2. h3, h4, h5{
 	font-family: "Roboto", sans-serif;
 }
+.thin{
+	font-weight: 100;
+}
 .f300{
 	font-weight: 300;
 }
@@ -38,11 +41,11 @@ h1, h2. h3, h4, h5{
 	min-height: 600px;
 }
 .text-black {
-  color: #000 !important;
+	color: #000 !important;
 }
 
 a.text-muted:focus, a.text-muted:hover {
-  color: #272829 !important;
+	color: #272829 !important;
 }
 .view-hidden{
 	background: rgba(0, 0, 0, 0.42);
@@ -57,4 +60,33 @@ a.text-muted:focus, a.text-muted:hover {
 .view-hidden #foo{
 	z-index: 99;
 	display: none;
+}
+i.material-icons.big-icon {
+	font-size: 21rem;
+}
+.phone-view{
+	background-image: url("../img/nexus5x.png");
+	margin:0 auto;
+	max-width: 300px;
+	width: 100%;
+	min-height: 300px;
+	height: 100%;
+	background-size: 95%;
+	background-repeat: no-repeat;
+}
+.monitor{
+	background-image: url("../img/monitor.png");
+	margin:0 auto;
+	max-width: 700px;
+	width: 100%;
+	min-height: 700px;
+	height: 100%;
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+@media (max-width: 767px) { 
+	.monitor{
+		min-height: 300px;
+	}	
 }

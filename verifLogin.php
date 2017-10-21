@@ -11,7 +11,7 @@ if(isset($_POST["senha"]) && isset($_POST["email"])){
 			if ($senha == $row["senha"]) {
 				// setcookie("usuario", "teste", time() + 360 );
 				$_SESSION["user_id"] = $row["id"];
-				$_SESSION["user_name"] = $row["nome"];
+				$_SESSION["user_name"] = $row["user"];
 				header("location: admin.php");
 			}else{
 				setAlert("login.php",2);
