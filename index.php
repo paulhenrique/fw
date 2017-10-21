@@ -1,7 +1,7 @@
 <?php
 include'lib.php';
-if (isset($_COOKIE['usuario'])) {
-	echo "<script> location.href='admin.php' </script>";
+if (isset($_SESSION["user_name"])) {
+	header("location: admin.php");
 }
 ?>
 <!DOCTYPE html>
@@ -27,10 +27,10 @@ if (isset($_COOKIE['usuario'])) {
 	<meta name="msapplication-TileImage" content="img/ico.png">
 	<meta name="msapplication-TileColor" content="#292b2c">
 	
-	<link rel="stylesheet" type="text/css" href="css/tether.min.css">
-	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
-	<link rel="stylesheet" type="text/css" href="css/estilo.css">
+	<link rel="stylesheet" type="text/css" href="view/css/tether.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/font-awesome.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/estilo.css">
 </head>
 <body>
 	<nav class="fixed-top navbar navbar-toggleable-md navbar-inverse bg-inverse">
@@ -124,9 +124,9 @@ if (isset($_COOKIE['usuario'])) {
 		</div>
 	</footer>
 </body>
-<script type="text/javascript" src="js/jquery.min.js"></script>
-<script type="text/javascript" src="js/tether.min.js"></script>
-<script type="text/javascript" src="js/bootstrap.min.js"></script>
-<script type="text/javascript" src="js/install.js"></script>
+<script type="text/javascript" src="view/js/jquery.min.js"></script>
+<script type="text/javascript" src="view/js/tether.min.js"></script>
+<script type="text/javascript" src="view/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="view/js/install.js"></script>
 <script type="text/javascript" src="service-worker.js"></script>
 </html>

@@ -1,6 +1,6 @@
 <?php
 include'lib.php';
-if (isset($_SESSION['usuario'])) {
+if (isset($_SESSION['user_name'])) {
 	header("location: admin.php");
 }
 ?>
@@ -10,8 +10,7 @@ if (isset($_SESSION['usuario'])) {
 	<title>Frozen Waves</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta charset="utf-8">
-	<link rel="manifest" href="manifest.json">
-	
+	<link rel="manifest" href="manifest.json">	
 	<!-- Add to homescreen for Chrome on Android -->
 	<meta name="mobile-web-app-capable" content="yes">
 	<link rel="icon" sizes="200x200" href="img/ico.png">
@@ -21,14 +20,14 @@ if (isset($_SESSION['usuario'])) {
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-title" content="Project">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<link rel="apple-touch-icon-precomposed" href="img/ico.png">
+	<link rel="apple-touch-icon-precomposed" href="view/img/ico.png">
 
 	<!-- Tile icon for Win8 (144x144 + tile color) -->
 	<meta name="msapplication-TileImage" content="img/ico.png">
 	<meta name="msapplication-TileColor" content="#292b2c">
 	
-	<link rel="stylesheet" type="text/css" href="css/tether.min.css">
-	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/tether.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/bootstrap.min.css">
 
 </head>
 <body class="bg-inverse text-white">
@@ -48,7 +47,7 @@ if (isset($_SESSION['usuario'])) {
 
 			<div class="alert alert-info alert-dismissible mt-5" role="alert">
 				<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-				<?php
+				<?php 
 				if (!isset($_GET["alert"])) {
 					echo "Bem Vindo!";
 				}

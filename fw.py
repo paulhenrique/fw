@@ -7,19 +7,26 @@ Created on Wed Oct 26 12:15:18 2016
 
 ver = 1.3
 
+import json
+from functools import partial
 import numpy as np
-import pylab
 import sys
+import os
+from scipy import constants
 from scipy import special as scisp
 from scipy.integrate import quad
-from scipy import constants
+from scipy.interpolate import spline
 import matplotlib.pyplot as plt
-from sympy import mpmath as mpmath
+import mpmath
 from sympy import sympify
 from timeit import default_timer as timer
 from datetime import date
 import time
-import json
+import multiprocessing
+from multiprocessing.pool import Pool
+from multiprocessing.pool import ThreadPool
+
+usuario_sistema = ""
 
 def nope():
     stuff = ['I\'m sorry dave, I can\'t let you do that.',
@@ -31,9 +38,9 @@ def nope():
              'WRONG',
              'Please, stop this...']
     time.sleep(0.5)
-    print('!!!!Error!!!')
+    # print('!!!!Error!!!')
     time.sleep(0.5)
-    print(np.random.choice(stuff))
+    # print(np.random.choice(stuff))
     time.sleep(0.7)
     
 def krodel(i,j):
@@ -44,28 +51,21 @@ def krodel(i,j):
     else:
         return nope()
 
-def menu():
-    print("Choose one option:")
-    print("Type '1' to test BesseJ for ordem and x*kphop(0)")
-    print("Type '2' to test Abs[Phi]² for ")
-    print("Type '3' to test gnmTME, gnmTMLA and gnmTMLAV graph")
-    print("Type '4' to test Cprz and x graphs in E, LA and LAV approachs")    
-    print("Type '5' to test gnmTME, gnmTMLA and gnmTMLAV numerically")
-    print("Type '6' to test tau and pi")
-    print("Type '7' to test an and bn")
-    print("Type '8' to make Fig.1")    
-    print("Type '9' to make Fig.2")   
-    print("Type '10' to make Fig.3")
-    print("Type '11' to make Fig.4")
-    print("Type '0' to exit.")
+#def menu():
+    # print("Choose one option:")
+    # print("Type '1' to test BesseJ for ordem and x*kphop(0)")
+    # print("Type '2' to test Abs[Phi]² for ")
+    # print("Type '3' to test gnmTME, gnmTMLA and gnmTMLAV graph")
+    # print("Type '4' to test Cprz and x graphs in E, LA and LAV approachs")    
+    # print("Type '5' to test gnmTME, gnmTMLA and gnmTMLAV numerically")
+    # print("Type '6' to test tau and pi")
+    # print("Type '7' to test an and bn")
+    # print("Type '8' to make Fig.1")    
+    # print("Type '9' to make Fig.2")   
+    # print("Type '10' to make Fig.3")
+    # print("Type '11' to make Fig.4")
+    # print("Type '0' to exit.")
     
-'''Função que retorna a resolução de uma integral complexa. É feita a partir da
-resolução da integral separadamente pela sua parte real e complexa sem o i(ou 1j
-na linguagem do Python e depois estas são somadas e é acrescentado o 1j para 
-tornar a parte complexa de fato complexa. As integrais são feitas a partir do
-input de valores na função quad do scipy.integrate que as resolve por metodo de
-quadratura. Foi escrita por "dr jimbob" em: 
-http://stackoverflow.com/questions/5965583/use-scipy-integrate-quad-to-integrate-complex-numbers'''
 def complex_quadrature(func, a, b, **kwargs):
     def real_func(x):
         return np.real(func(x))
@@ -76,8 +76,20 @@ def complex_quadrature(func, a, b, **kwargs):
     return real_integral[0] + 1j*imag_integral[0]
 
 def gerar_arquivo_json(nome_arquivo, matriz, titulos):
-    with open(nome_arquivo, "w", encoding='utf-8') as outfile: 
-        json.dump([[titulos, matriz]], outfile, ensure_ascii=False, sort_keys=True, indent=1, separators=(',', ':'))
+     # with open(nome_arquivo, "w") as outfile: 
+    # outfile = open("teste.json", "w")
+    #var = json.dump([titulos, matriz], ensure_ascii=False, sort_keys=True, indent=1, separators=(',', ':'))
+    data = json.dumps([titulos, matriz], sort_keys=True, indent=4, separators=(',', ':'))
+    print(nome_arquivo)
+    global usuario_sistema
+    fd = os.open("users/"+ usuario_sistema + "/" + nome_arquivo, os.O_RDWR|os.O_CREAT )
+    arquivo = os.fdopen(fd, "w+")
+    arquivo.write(data)
+    arquivo.close()
+    print(data)
+    return 1234
+    print(nome_arquivo)
+
 
 '''|====|====|====|Parametros Gerais|====|====|====|'''
 
@@ -103,7 +115,7 @@ indref = indnr - 1j*indni
 #velocidade da luz no meio externo, água
 vel = c/indnr
 
-#comrpimento de onda no vácuo
+#comprimento de onda no vácuo
 lambdzero = 1064*10**(-9)
 
 #comprimento de onda no meio externo, água
@@ -169,7 +181,7 @@ def checktipo():
         A = 0.95
         Zmax = 0.1
         f = lambda _: 1
-    elif tipo == 2: #FW2
+    elif tipo == 2: 
         L = 2*10**(-3)
         NN = 15
         A = 0.98999999999
@@ -196,13 +208,13 @@ def checktipo():
             lambda z: 0, 
             lambda z: 0, 
             lambda z: 0])
-    elif tipo == 4:
+    elif tipo == 4: #FW2
         L = 1*10**(-3)
         NN = 15
         A = 0.9879999999999
         f = lambda _: 1
         Zmax = 0.1
-    elif tipo == 5:
+    elif tipo == 5: #FW3
         L = 1*10**(-3)
         NN = 15
         A = 0.9879999999999
@@ -319,7 +331,7 @@ def checkordem():
     localspot = max(LB)[1]
     
     #spot para o feixe de Bessel central de superposição que compõe a Frozen Wave no caso ordem = 0
-    spot0 = 2.405/mpmath.re(kphop(0))
+    spot0 = float(2.405/mpmath.re(kphop(0)))
 
     #Raio mínimo da abertura física para geração eficiente da Frozen Wave
     R = 2*L*(mpmath.re(kphop(-NN))/mpmath.re(betap(-NN)))
@@ -331,10 +343,10 @@ def checkordem():
 
 '''cx = "co"
 while cx != "q":
-   #print("Choose one type of coeficient:")
-   #print("Type 'co' to calculate using a constant coeficient")
-   #print("Type 'z' to calculate using a 0")
-   #print("Type 'q' to quit")
+   # #print("Choose one type of coeficient:")
+   # #print("Type 'co' to calculate using a constant coeficient")
+   # #print("Type 'z' to calculate using a 0")
+   # #print("Type 'q' to quit")
    #cx = input("Option: ")
    if cx.lower() == "co":
         #AM constante
@@ -363,7 +375,7 @@ def Ap(p):
 
 def testeAp():
     #Am para intensidade constante 
-    return [Ap(p) for p in range(-NN,NN+1)]
+    return list(map(Ap,range(-NN,NN+1)))
             
 
 def Psi(rho, z, t, z0):
@@ -443,40 +455,22 @@ else:
     CoefB1 = 1j
     CoefB2 = 1j
     
-if tipo==0:
-    def gnmTMLAI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*((-1j)**ordem)*testeAp()[p+NN]*(
-                CoefA1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                +CoefA2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(- 1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                )*mpmath.exp(1j*betap(p)*z0)
-        return soma        
-    def gnmTELAI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*((-1j)**ordem)*testeAp()[p+NN]*(
-                CoefB1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                -CoefB2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                )*mpmath.exp(1j*betap(p)*z0)
-        return soma
-else:
-    def gnmTMLAI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*((-1j)**ordem)*testeAp()[p+NN]*(
-                CoefA1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                +CoefA2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(- 1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                )*mpmath.exp(1j*betap(p)*z0)
-        return soma
-    def gnmTELAI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*((-1j)**ordem)*testeAp()[p+NN]*(
-                CoefB1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                -CoefB2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(- 1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                )*mpmath.exp(1j*betap(p)*z0)
-        return soma
+def gnmTMLAI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (1/2)*Znm(n,m)*testeAp()[p+NN]*(
+            CoefA1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+            +CoefA2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(- 1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+            )*mpmath.exp(1j*betap(p)*z0)
+    return soma
+def gnmTELAI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (1/2)*Znm(n,m)*testeAp()[p+NN]*(
+            CoefB1*mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+            -CoefB2*mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(- 1 + m - ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+            )*mpmath.exp(1j*betap(p)*z0)
+    return soma
 
 '''|====|====|====|====|====|====|====|'''
 
@@ -486,52 +480,28 @@ else:
 THIS IS BETTER FOR COMPARISON WITH THE EXACT ONE, BUT ARE NOT THE ONE USED IN PREVIOUS WORKS.
 INDEED, PREVIOUS WORKS RELIED ON THE BSCs SHOWN ABOVE|====|====|====|'''
 
-if tipo==0:
-    def gnmTMLAVI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
-                (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                )+(1-mpmath.cos(axicon(p)))*(
-                mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-                +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-                ))*mpmath.exp(1j*betap(p)*z0)
-        return soma        
-    def gnmTELAVI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1j/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
-            (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            -mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            )+(1-mpmath.cos(axicon(p)))*(
-            -mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            ))*mpmath.exp(1j*betap(p)*z0)
-        return soma
-else:
-    def gnmTMLAVI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
-            (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            )+(1-mpmath.cos(axicon(p)))*(
-            mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            ))*mpmath.exp(1j*betap(p)*z0)
-        return soma
-    def gnmTELAVI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (1j/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
-            (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            -mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            )+(1-mpmath.cos(axicon(p)))*(
-            -mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
-            +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
-            ))*mpmath.exp(1j*betap(p)*z0)
-        return soma
+def gnmTMLAVI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (1/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
+        (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+        +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+        )+(1-mpmath.cos(axicon(p)))*(
+        mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+        +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+        ))*mpmath.exp(1j*betap(p)*z0)
+    return soma
+def gnmTELAVI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (1j/2)*Znm(n,m)*(testeAp()[p+NN]/(g(p)*(1+mpmath.cos(axicon(p)))))*g(p)*((-1j)**ordem)*(
+        (1+mpmath.cos(axicon(p)))*(mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+        -mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+        )+(1-mpmath.cos(axicon(p)))*(
+        -mpmath.besselj(1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(-1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(1+m)*phi0)
+        +mpmath.besselj(-1+m,Rloc(n)*mpmath.sin(axicon(p)))*mpmath.besselj(1+m-ordem,r0*konda*mpmath.sin(axicon(p)))*np.exp(-1j*(-1+m)*phi0)
+        ))*mpmath.exp(1j*betap(p)*z0)
+    return soma
 
 '''|====|====|====|====|====|====|====|'''
 
@@ -541,40 +511,23 @@ else:
 SÃO OS FATORES DE FORMA EXATOS APENAS PARA FEIXES CIRCULARMENTE SIMÉTRICOS, 
 APENAS COM POLARIZAÇÃO ORIGINAL EM X|====|====|====|'''
 
-if tipo==0:
-    def gnmTMEI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += testeAp()[p+NN]*g(p)*(
-            (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
-            +(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
-            )*mpmath.exp(1j*betap(p)*z0)
-        return (-(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma        
-    def gnmTEEI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += testeAp()[p+NN]*g(p)*(
-            (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
-            -(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
-            )*mpmath.exp(1j*betap(p)*z0)
-        return (1j*(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma 
-else:
-    def gnmTMEI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (testeAp()[p+NN]/(1+mpmath.cos(axicon(p))))*(
-            (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
-            +(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
-            )*mpmath.exp(1j*betap(p)*z0)
-        return (-(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma        
-    def gnmTEEI(n,m,r0,phi0,z0):
-        soma = 0
-        for p in range(-NN,NN+1):
-            soma += (testeAp()[p+NN]/(1+mpmath.cos(axicon(p))))*(
-            (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
-            -(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
-            )*mpmath.exp(1j*betap(p)*z0)
-        return (1j*(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma  
+
+def gnmTMEI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (testeAp()[p+NN]/(1+mpmath.cos(axicon(p))))*(
+        (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
+        +(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
+        )*mpmath.exp(1j*betap(p)*z0)
+    return (-(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma        
+def gnmTEEI(n,m,r0,phi0,z0):
+    soma = 0
+    for p in range(-NN,NN+1):
+        soma += (testeAp()[p+NN]/(1+mpmath.cos(axicon(p))))*(
+        (1j**(ordem-m+1))*np.exp(1j*(ordem - m + 1)*phi0)*mpmath.besselj(ordem-m+1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))+m*fpi(n,m,axicon(p)))
+        -(1j**(ordem-m-1))*np.exp(1j*(ordem - m - 1)*phi0)*mpmath.besselj(ordem-m-1,r0*konda*mpmath.sin(axicon(p)))*(tau(n,m,axicon(p))-m*fpi(n,m,axicon(p)))
+        )*mpmath.exp(1j*betap(p)*z0)
+    return (1j*(-1)**((m-abs(m))/2))*(mpmath.fac(n-m)/mpmath.fac(n+abs(m)))*soma  
 
 '''|====|====|====|====|====|====|====|'''
 
@@ -1088,44 +1041,25 @@ def TzE(x,y,r0,phi0,z0):
 
 '''|====|====|====|====|====|====|====|'''
 
+'''|====|====|====|Classes|====|====|====|'''
+'''class TMLAThread (threading.Thread):
+    def __init__(self, name, counter, n, m, r0, phi0, z0):
+        threading.Thread.__init__(self)
+        self.threadID = counter
+        self.name = name
+        self.counter = counter
+    def run(self):
+        # print("Starting " + self.name + self.threadID)
+        threadLock.acquire()
+        gnmTMLA(n, m, r0, phi0, z0)
+        # print("Exiting " + self.name)
+        threadLock.release()'''
+        
+'''threadLock = threading.Lock()'''
+'''|====|====|====|====|====|====|====|'''
 
 '''|====|====|====|Verificação das variaveis|====|====|====|'''
-def checkvar():
-    print("No de BBs para Frozen Wave = ", (2*NN)+1)
-    print("Número da onda em relação a frequência escolhida (m^-1) = ", konda)
-    print("Coeficiente A (Parâmetro Q do MICHEL)", A)
-    print("Spot do feixe de Bessel central (µm) = ", spot0*10**6)
-    print("Ponto radial do centro do spot principal = ", localspot)
-    print("Raio mínimo de abertura (mm) = ", R*10**3)
-    print("Raio da partícula", raiop)
-    print("....Testando betam.....")
-    for p in range(1,2*NN+2):
-        print("Numeros de onda longitudinal para p = ", p, "   beta[",p,"](m^-1) = ", betap(p-NN-1))
-    print("....Testando kphom.....")
-    for p in range(1,2*NN+2):
-        print("Numeros de onda radiais para p = ", p, "   kphop[",p,"](m^-1) = ", kphop(p-NN-1))
-    print("....Testando Axicon.....")
-    for p in range(1,2*NN+2):
-        print("Angulo do axicon para p = ", p, "   axicon[",p,"](graus) = ", axicon(p-NN-1)*(180/pi))
-    print("....Testando Am.....")
-    print("\n".join(map(str,testeAp())))
-    print("....Checando valores dos gnms....")
-    print("[na = 1,ma = 1,r0 = 0,phi0 = 0,z0 = 0*10^(-5)]")
-    print("gnmTMLA[na,ma,r0,phi0,z0] = ",gnmTMLA(1,1,0,0,0*10**(-5)))
-    print("gnmTELA[na,ma,r0,phi0,z0] = ",gnmTELA(1,1,0,0,0*10**(-5)))
-    print("gnmTMLAV[na,ma,r0,phi0,z0] = ",gnmTMLAV(1,1,0,0,0*10**(-5)))
-    print("gnmTELAV[na,ma,r0,phi0,z0] = ",gnmTELAV(1,1,0,0,0*10**(-5)))
-    print("gnmTME[na,ma,r0,phi0,z0] = ",gnmTME(1,1,0,0,0*10**(-5)))
-    print("gnmTEE[na,ma,r0,phi0,z0] = ",gnmTEE(1,1,0,0,0*10**(-5)))
-    #print("....Exemplos de erros percentuais de gnmTM e gnmTE")
-    #if abs(gnmTME(1,1,0,0,0*10**(-5)))==0:
-    #    print("Whoops, division by 0")
-    #else:
-    #    print(100*abs((abs(gnmTME(1,1,0,0,0*10**(-5)))) - abs(gnmTMLA(1,1,0,0,0*10**(-5))))/abs(gnmTME(1,1,0,0,0*10**(-5))))
-    #if abs(gnmTEE(1,1,0,0,0*10**(-5)))==0:
-    #    print("Whoops, division by 0")
-    #else:
-    #    print(100*abs((abs(gnmTEE(1,1,0,0,0*10**(-5)))) - abs(gnmTELA(1,1,0,0,0*10**(-5))))/abs(gnmTEE(1,1,0,0,0*10**(-5))))
+
 '''|====|====|====|====|====|====|====|'''
 
 '''|====|====|====|Codigo principal|====|====|====|'''
@@ -1145,12 +1079,23 @@ if __name__=="__main__":
     while True:
         try:
             #tipo = int(input("Type of Frozen Wave: "))
+            global usuario_sistema
+            usuario_sistema = tratar_entrada(sys.argv, "usuario")
+        except ValueError:
+            nope()
+            continue
+        else:
+            # print("Tipo=", tipo)
+            break
+    while True:
+        try:
+            #tipo = int(input("Type of Frozen Wave: "))
             tipo = int(tratar_entrada(sys.argv, "tipo"))
         except ValueError:
             nope()
             continue
         else:
-            print("You selected option:", tipo)
+            # print("Tipo=", tipo)
             break
     checktipo()
     while True:
@@ -1161,106 +1106,103 @@ if __name__=="__main__":
             nope()
             continue
         else:
-            print("You selected option:", ordem)
+            # print("Ordem=", ordem)
             break
     checkordem()
-    checkvar()
     while True:
         try:
-            menu()
             #choice = int(input("Option: "))
             choice = int(tratar_entrada(sys.argv,"option"))
         except ValueError:
             nope()
             continue
         else:
-            print("You selected option:", choice)
+            # print("You selected option:", choice)
             break
         
     if choice == 1:
+        print("1")
+        #step 200
         startall = timer()
         vBJx = []
         vX = []
         step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(-10*(spot0*10**6),10*(spot0*10**6)+step,step)
-        print("x range:", step) #range de teste: 0.005
-        print("Vector x in µm:", fstep, "Size:", len(fstep))
+        fstep = list(np.linspace(-10*(spot0*10**6),10*(spot0*10**6),step))
+        # print("Vector x in µm:", fstep, "Size:", len(fstep))
         startfor = timer()
         for dx in fstep:
                 BJx = mpmath.re(mpmath.besselj(ordem, dx*(10**(-6))*mpmath.re(kphop(0))))
-                print("Jn[",dx,"] = ", BJx)
+                # print("Jn[",dx,"] = ", BJx)
                 endfor = timer()
-                print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+                # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
                 vBJx.append(float(BJx))
                 vX.append(float(dx))
-        axes = plt.gca()
-        axes.set_xlim([-10*(float(spot0)*10**6),10*(float(spot0)*10**6)+step])
-        ylim = [float(min(vBJx)),float(max(vBJx))]
-        axes.set_ylim(ylim)
-        plt.plot(vX,vBJx)
-        plt.grid(True)
-        plt.xlabel('x(µm)')
-        plt.ylabel('Jn(x)')
-        plt.title('Graph x by Jn(x)')
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([-10*(float(spot0)*10**6),10*(float(spot0)*10**6)])
+        #ylim = [float(min(vBJx)),float(max(vBJx))]
+        ##axes.set_ylim(ylim)
+        #plt.plot(vX,vBJx)
+        #plt.grid(True)
+        #plt.xlabel(''x(µm)')
+        #plt.ylabel('Jn(x)')
+        #plt.title('Graph x by Jn(x)')
+        ## plt.show()
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         #np.savetxt('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'_'+'.txt'+'IMOC', np.transpose([vBJx,vX]))            
         titulos = {"x(µm)":"Jn(x)"}
         vetores = dict(zip(vX,vBJx))
-        gerar_arquivo_json('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        print("prexec json")
+        print(gerar_arquivo_json('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos))
+
     elif choice == 2:
+        #step = 0.0025
         startall = timer()
-        plt.plot(range(-NN,NN+1),np.real(testeAp()))
-        plt.grid(True)
-        plt.xlabel('q')
-        plt.ylabel('Re(Aq)')
-        plt.title('Real Values of A by its subindex')
-        plt.show()
-        plt.plot(range(-NN,NN+1),np.imag(testeAp()))
-        plt.grid(True)
-        plt.xlabel('q')
-        plt.ylabel('Im(Aq)')
-        plt.title('Imaginary Values of A by its subindex')
-        plt.show()
-        plt.plot(range(-NN,NN+1),np.abs(testeAp()))
-        plt.grid(True)
-        plt.xlabel('q')
-        plt.ylabel('Abs(Aq)')
-        plt.title('Absolute Values of A by its subindex')
-        plt.show()
+        #plt.plot(range(-NN,NN+1),np.real(testeAp()))
+        #plt.grid(True)
+        #plt.xlabel('q')
+        #plt.ylabel('Re(Aq)')
+        #plt.title('Real Values of A by its subindex')
+        ## plt.show()
+        #plt.plot(range(-NN,NN+1),np.imag(testeAp()))
+        #plt.grid(True)
+        #plt.xlabel('q')
+        #plt.ylabel('Im(Aq)')
+        #plt.title('Imaginary Values of A by its subindex')
+        ## plt.show()
+        #plt.plot(range(-NN,NN+1),np.abs(testeAp()))
+        #plt.grid(True)
+        #plt.xlabel('q')
+        #plt.ylabel('Abs(Aq)')
+        #plt.title('Absolute Values of A by its subindex')
+        ## plt.show()
         vPsi = []
         vZ = []
-        step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(-2.5*(10**3)*Zmax*L,2.5*(10**3)*Zmax*L+step,step)
-        print("Z range:", step) #range recomendada 0.005
-        print("Vector Z in µm:", fstep, "Size:", len(fstep))
+        step = float(tratar_entrada(sys.argv,"step"))        
+        fstep = list(np.linspace(-2.5*(10**3)*Zmax*L,2.5*(10**3)*Zmax*L,step))
+        # print("Vector Z in µm:", fstep, "Size:", len(fstep))
         startfor = timer()
         for dz in fstep:
             Psiz = (np.abs(Psi(localspot,dz*10**(-3),0,0*10**(-4))))**2
-            print("Value of |Psi|² for z = ", dz, "   |Psi[",localspot,dz*10**(-3),",0,0]|² = ", Psiz)
-            endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vPsi.append(float(Psiz))
             vZ.append(dz)
-        axes = plt.gca()
-        axes.set_xlim([-2.5*(10**3)*Zmax*L,2.5*(10**3)*Zmax*L+step])
-        plt.plot(vZ,vPsi)
-        plt.grid(True)
-        plt.xlabel('z(mm)')
-        plt.ylabel('|Psi(localspot,z*10**(-3),0,0)|²')
-        plt.title('Graph z by |Psi(localspot,z*10**(-3),0,0)|²')
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([-2.5*(10**3)*Zmax*L,2.5*(10**3)*Zmax*L])
+        #plt.plot(vZ,vPsi)
+        #plt.grid(True)
+        #plt.xlabel(r'$z(mm)$', fontsize = 14)
+        #plt.ylabel(r'$|\Psi(localspot,z10^{-3},0,0)|^{2}$', fontsize = 14)
+        #plt.title(r'$z$ by $|\Psi(localspot,z10^{-3},0,0)|^{2}$',fontsize=16)
+        ## plt.show()
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"z(mm)":"|Psi(localspot,z*10**(-3),0,0)|²"}
         vetores = dict(zip(vZ,vPsi))
         gerar_arquivo_json('Psi'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
     elif choice == 3:
-        print("Nothing here now.")
-        time.sleep(1)
-        raise SystemExit
-    elif choice == 4:
+        #tipo 8
+        #ordem 0
+        #step 110
         startall = timer()
         yy = 1.05**2
         vz=[]
@@ -1268,28 +1210,49 @@ if __name__=="__main__":
         vCprzLAV = []
         vCprzE = []
         step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(L*-0.5*10**3,(L*0.5*10**3)+step,step)
-        print("Z's range:", step) #range de teste: 0.01
-        print("Vector Z in mm", fstep, "Size:", len(fstep))
-        #rar = float(input("r0 range: "))
-        rar = 2*10**-13        
-        frar = np.arange(-10*spot*10**-6,(10*spot*10**-6)+rar,rar)
-        print("r0's range:", rar)
-        print("Vector r0 in µm", frar, "Size:", len(frar))
+        fstep = list(np.linspace(L*-0.5*10**3,L*0.5*10**3,step))
+        # print("Z's range:", step)
+        # print("Vector Z in mm", fstep, "Size:", len(fstep))
+        frar = list(np.linspace(-10*spot*10**-6,10*spot*10**-6,200))
+        # print("Vector r0 in µm", frar, "Size:", len(frar))
         startfor = timer()
         for dz in fstep:
             aCprzE = CprzE(raiop,yy*raiop,0,0,dz*10**-3)
-            print("Valor de CprzE para z = ", dz, "     CprzE[",raiop,",", yy*raiop ,", 0, 0,",dz,"*10**-3] = ", aCprzE)
+            # #print("Valor de CprzE para z = ", dz, "     CprzE[",raiop,",", yy*raiop ,", 0, 0,",dz,"*10**-3] = ", aCprzE)
             vCprzE.append(aCprzE)       
             aCprzLA = CprzLA(raiop,yy*raiop,0,0,dz*10**-3)
-            print("Valor de CprzLA para z = ", dz, "     CprzLA[",raiop,",", yy*raiop ,",0,0,",dz,"*10**-3] = ", aCprzLA)
+            # #print("Valor de CprzLA para z = ", dz, "     CprzLA[",raiop,",", yy*raiop ,",0,0,",dz,"*10**-3] = ", aCprzLA)
             vCprzLA.append(aCprzLA)   
             aCprzLAV = CprzLAV(raiop,yy*raiop,0,0,dz*10**-3)
-            print("Valor de CprzLAV para z = ", dz, "     CprzLAV[",raiop,",", yy*raiop ,",0,0,",dz,"*10**-3] = ", aCprzLAV)
+            # #print("Valor de CprzLAV para z = ", dz, "     CprzLAV[",raiop,",", yy*raiop ,",0,0,",dz,"*10**-3] = ", aCprzLAV)
             vCprzLAV.append(aCprzLAV)             
             endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vz.append(dz)
+        ##axes = plt.gca()
+        #axes.set_xlim([-10*spot*10**-6,(10*spot*10**-6)])
+        #ylim = [float(min(vCprzE)),float(max(vCprzE))]
+        ##axes.set_ylim(ylim)
+        #plt.plot(vz,vCprzE, linestyle='-', color='black')
+        #plt.plot(vz,vCprzLA, linestyle='-', color='blue')
+        #plt.plot(vz,vCprzLAV, linestyle='--', color='red')
+        #plt.legend(['$C^{E}_{pr,z}$', '$C^{loc}_{pr,z}$', '$C^{locCC}_{pr,z}$'], loc='upper right',fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$z (mm)$',fontsize = 16)
+        #plt.ylabel(r'$C^{E}_{pr,z} (m^2)$',fontsize = 16)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+    elif choice == 4:
+        #tipo 8
+        #ordem 0
+        #step 110
+        startall = timer()
+        yy = 1.05**2
+        rar = float(tratar_entrada(sys.argv,"step"))
+        frar = list(np.linspace(-10*spot*10**-6,10*spot*10**-6,rar))
+        # print("r0's range:", step) #range de teste: 0.01
+        # print("Vector r0 in µm", frar, "Size:", len(frar))
         vr0=[]
         vCprxLA = []
         vCprxLAV = []
@@ -1297,66 +1260,53 @@ if __name__=="__main__":
         startfor = timer()
         for dr in frar:
             aCprxE = CprxE(raiop,yy*raiop,dr*10**-6,0,0)
-            print("Valor de CprxE para r0 = ", dr, "     CprxE[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxE)
+            # #print("Valor de CprxE para r0 = ", dr, "     CprxE[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxE)
             vCprxE.append(aCprxE)       
             aCprxLA = CprxLA(raiop,yy*raiop,dr*10**-6,0,0)
-            print("Valor de CprxLA para r0 = ", dr, "     CprxLA[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxLA)
+            # #print("Valor de CprxLA para r0 = ", dr, "     CprxLA[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxLA)
             vCprxLA.append(aCprxLA)  
             aCprxLAV = CprxLAV(raiop,yy*raiop,dr*10**-6,0,0)
-            print("Valor de CprxLAV para r0 = ", dr, "     CprxLAV[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxLAV)
+            # #print("Valor de CprxLAV para r0 = ", dr, "     CprxLAV[",raiop,",", yy*raiop ,",",dr,"*10**-6, 0, 0] = ", aCprxLAV)
             vCprxLAV.append(aCprxLAV)             
             endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vr0.append(dr)
-        axes = plt.gca()
-        axes.set_xlim([-10*spot*10**-6,(10*spot*10**-6)+rar])
-        #ylim = [float(min(vBJx)),float(max(vBJx))]
-        #axes.set_ylim(ylim)
-        axes = plt.gca()
-        axes.set_xlim([L*-0.5*10**3,(L*0.5*10**3)+step])
-        #ylim = [float(min(vBJx)),float(max(vBJx))]
-        #axes.set_ylim(ylim)
-        plt.plot(vz,vCprzE, linestyle='-', color='black')
-        plt.plot(vz,vCprzLA, linestyle='-', color='blue')
-        plt.plot(vz,vCprzLAV, linestyle='--', color='red')
-        plt.legend(['CprzE', 'CprzLA', 'CprzLAV'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('z (mm)')
-        plt.ylabel('Cpr,z (m^2)')
-        plt.show()
-        plt.plot(vr0,vCprxE, linestyle='-', color='black')
-        plt.plot(vr0,vCprxLA, linestyle='-', color='blue')
-        plt.plot(vr0,vCprxLAV, linestyle='--', color='red')
-        plt.legend(['CprxE', 'CprxLA', 'CprxLAV'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('r0 (µm)')
-        plt.ylabel('Cpr,x (m^2)')
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([L*-0.5*10**3,(L*0.5*10**3)+step])
+        ##ylim = [float(min(vBJx)),float(max(vBJx))]
+        ###axes.set_ylim(ylim)
+        #plt.plot(vr0,vCprxE, linestyle='-', color='black')
+        #plt.plot(vr0,vCprxLA, linestyle='-', color='blue')
+        #plt.plot(vr0,vCprxLAV, linestyle='--', color='red')
+        #plt.legend(['$C^{E}_{pr,z}$', '$C^{loc}_{pr,z}$', '$C^{locCC}_{pr,z}$'], loc='upper right',fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$z (mm)$',fontsize = 16)
+        #plt.ylabel(r'$C^{E}_{pr,z} (m^2)$',fontsize = 16)
+        ## plt.show()
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
     elif choice == 5:
-        ordem = 0
         r0 = 0
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]
-        print("===============================================")
-        print("order = 0 e r0 = 0")
+        # print("===============================================")
+        # print("order = 0 e r0 = 0")
         for na in naLista:
-            print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
+            rint(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
         del ordem, na
 
         ordem = 3
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]     
-        print("===============================================")
-        print("ordem = 3 e r0 = 0")
+        # print("===============================================")
+        # print("ordem = 3 e r0 = 0")
         for na in naLista:
-            print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
+             print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
         del ordem, na
        
         ordem = 0
         r0 = 10*10**(-6)
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]     
-        print("===============================================")
-        print("ordem = 0 e r0 = 10*10^(-6)")
+        # print("===============================================")
+        # print("ordem = 0 e r0 = 10*10^(-6)")
         for na in naLista:
             print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
         del ordem, na, r0
@@ -1364,45 +1314,45 @@ if __name__=="__main__":
         ordem = 3
         r0 = 10*10**(-6)
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]     
-        print("===============================================")
-        print("ordem = 3 e r0 = 10*10^(-6)")
+        # print("===============================================")
+        # print("ordem = 3 e r0 = 10*10^(-6)")
         for na in naLista:
-            print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
+             print(na, gnmTME(na,ordem + 1,r0,0,0), gnmTMLA(na,ordem + 1,r0,0,0), gnmTMLAV(na,ordem + 1,r0,0,0))
         del ordem, na, r0
         
         ordem = 2
         r0 = 10*10**(-6)
         z0 = 10**(-3)
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]     
-        print("===============================================")
-        print("ordem = 2, r0 = 10*10^(-6) e z = 10^(-3)")
+        # print("===============================================")
+        # print("ordem = 2, r0 = 10*10^(-6) e z = 10^(-3)")
         for na in naLista:
-            print(na, gnmTME(na,ordem + 1,r0,0,z0), gnmTMLA(na,ordem + 1,r0,0,z0), gnmTMLAV(na,ordem + 1,r0,0,z0))
+             print(na, gnmTME(na,ordem + 1,r0,0,z0), gnmTMLA(na,ordem + 1,r0,0,z0), gnmTMLAV(na,ordem + 1,r0,0,z0))
  
         del na,r0,z0,ordem
     elif choice == 6:
         ordem = 0
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]
-        print("===============================================")
-        print("ordem = 0")
+        # print("===============================================")
+        # print("ordem = 0")
         for na in naLista:
-            print(na, tau(na, ordem + 1, 0.2), fpi(na, ordem + 1, 0.2))
+             print(na, tau(na, ordem + 1, 0.2), fpi(na, ordem + 1, 0.2))
         
         ordem = 3
         naLista = [ordem + 1,ordem + 2,ordem + 5,ordem + 10,ordem + 25,ordem + 50.000000001,ordem + 100.000000001,ordem + 250.000000001,ordem + 500.000000001]     
-        print("===============================================")
-        print("ordem = 3")
+        # print("===============================================")
+        # print("ordem = 3")
         for na in naLista:
-            print(na, tau(na, ordem + 1, 0.2), fpi(na, ordem + 1, 0.2))
+             print(na, tau(na, ordem + 1, 0.2), fpi(na, ordem + 1, 0.2))
     elif choice == 7:
         yy = 1.01**2
         for n in range(1,11+2):
-            print(n, an(lambd, yy*lambd, n), bn(lambd, yy*lambd, n))
+             print(n, an(lambd, yy*lambd, n), bn(lambd, yy*lambd, n))
         del yy
     elif choice == 8:
         #tipo 1
         #ordem = 0
-        #step = 2.5
+        #step = 150
         startall = timer()
         ma = 1
         r0 = 0
@@ -1411,50 +1361,509 @@ if __name__=="__main__":
         vn = []
         vgnmTMLA = []
         vgnmTME = []
+#        vgnmTMLAV = []
         step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(1.001,400+step,step)
-        print("n range:", step)
-        print("Vector n", fstep, "Size:", len(fstep))
+        fstep = list(np.linspace(1.001,400,step))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
         startfor = timer()
         for dna in fstep:
-            abgnmTMLA = gnmTMLA(dna, ma, r0, phi0, z0)
-            print("Valor de |gnmTMLA| para n = ", dna, "   |gnmTMLA[",dna,",1,0,0,0]| = ", abgnmTMLA)
-            vgnmTMLA.append(float(abgnmTMLA.real))                  
-            abgnmTME = gnmTME(dna, ma, r0, phi0, z0)
-            print("Valor de |gnmTME| para n = ", dna, "   |gnmTME[",dna,",1,0,0,0]| = ", abgnmTME)
-            vgnmTME.append(float(abgnmTME.real))            
+            abgnmTME = re(gnmTME(dna, ma, r0, phi0, z0))
+            vgnmTME.append(float(abgnmTME))     
+            abgnmTMLA = re(gnmTMLA(dna, ma, r0, phi0, z0))
+            vgnmTMLA.append(float(abgnmTMLA))                  
+#            abgnmTMLAV = gnmTMLAV(dna, ma, r0, phi0, z0)
+#            vgnmTMLAV.append(float(abgnmTMLAV))            
             endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vn.append(dna)
-        axes = plt.gca()
-        axes.set_xlim([0,400+step])
-        ylim = [float(min(vgnmTMLA)*1.2),float(max(vgnmTMLA)*1.2)]
-        axes.set_ylim(ylim)
-        plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
-        plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
-        plt.legend(['gnmTME', 'gnmTMLA'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('n')
-        plt.ylabel('gnmTM(n,±1,0,0,0)')
-        a = plt.axes([.25, 0.65, .25, .25])
-        testvgnmTME = [x*constants.kilo for x in vgnmTME]
-        testvgnmTMLA = [x*constants.kilo for x in vgnmTMLA]
-        plt.plot(vn,testvgnmTME, linestyle='-', color='black')
-        plt.plot(vn,testvgnmTMLA, linestyle='--', color='red')
-        plt.grid(True)
-        plt.ylabel('(x10^-3)')
-        plt.ylim(-4, 4)
-        plt.xlim(300, 400)
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([0,400+step])
+        #ylim = [float(min(vgnmTMLA)*1.2),float(max(vgnmTMLA)*1.2)]
+        ##axes.set_ylim(ylim)
+        ##plt.ylim(-0.2, 0.6)
+        #plt.yticks(np.arange(-0.2,0.55,0.2))
+        #plt.xlim(0, 400)
+        #plt.xticks(np.arange(0,401,100))
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,vgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$g^{\pm1,exa}_{n,TM}$', '$g^{\pm1,loc}_{n,TM}$', '$g^{\pm1,locCC}_{n,TM}$'], loc='upper right',fontsize = 16)
+        #plt.legend(['$g^{\pm1,exa}_{n,TM}$', '$g^{\pm1,loc}_{n,TM}$'], loc='upper right',fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$',fontsize = 16)
+        #plt.ylabel(r'$|g^{\pm1}_{n,TM}|$',fontsize = 16)
+###        a = plt.axes([.25, 0.65, .25, .25])
+#        testvgnmTME = [x*constants.kilo for x in vgnmTME]
+#        testvgnmTMLA = [x*constants.kilo for x in vgnmTMLA]
+#        testvgnmTMLAV = [x*constants.kilo for x in vgnmTMLAV]
+##        plt.plot(vn,testvgnmTME, linestyle='-', color='black')
+##        plt.plot(vn,testvgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,testvgnmTMLAV, linestyle='--', color='blue')
+##        plt.grid(True)
+##        plt.ylabel(r'$(\times10^-3)$',fontsize = 12)
+###        plt.ylim(-4, 4)
+##        plt.yticks(np.arange(-4,5,2))
+##        plt.xlim(300, 400)
+        ## plt.show()
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
         titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        titulos2 = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]x10^-3"}
-        vetores2 = dict(zip(vn,zip(testvgnmTME,testvgnmTMLA)))
-        gerar_arquivo_json("teste1.txt", vetores, titulos)
-        gerar_arquivo_json("teste2.txt", vetores2, titulos2)
+        gerar_arquivo_json('gnm'+'_'+'fig1'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
     elif choice == 9:
+        #tipo 1
+        #ordem 0
+        #step 150
+        startall = timer()
+        na = 1
+        ma = -1
+        phi0 = 0
+        r0 = 0
+        vgnmTMLA = []
+        vgnmTME = []
+        vgnmTMLAV = []
+        #step = float(input("r0 range: "))
+        step = float(tratar_entrada(sys.argv, "step"))
+        fstep = list(np.linspace(0,3*constants.milli,step))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
+        flin = np.linspace(fstep[0],20*constants.micro,300)
+        startfor = timer()
+        for dz in flin:
+            abgnmTMLA = mpmath.re(gnmTMLA(na, ma, r0, phi0, dz))
+            # #print("Valor de gnmTMLA para n = ", dz, " , ", abgnmTMLA)
+            vgnmTMLA.append(float(abgnmTMLA))
+            #com_vgnmTMLA.append(float(bbgnmTMLA.real))       
+            abgnmTME = mpmath.re(gnmTME(na, ma, r0, phi0, dz))
+            # #print("Valor de gnmTME para n = ", dz, " , ", abgnmTME)
+            vgnmTME.append(float(abgnmTME))
+            #com_vgnmTME.append(float(bbgnmTME.real))                 
+#            abgnmTMLAV = gnmTMLAV(na, ma, r0, phi0, dz)
+#            vgnmTMLAV.append(float(abgnmTMLAV.real))
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+        vgnmTMLA2 = []
+        vgnmTME2 = []
+        vgnmTMLAV2 = []
+        for dz in fstep:
+            abgnmTMLA = gnmTMLA(na, ma, r0, phi0, dz)
+            # #print("Valor de gnmTMLA para n = ", dz, " , ", abgnmTMLA)
+            vgnmTMLA2.append(float(abgnmTMLA.real))
+            #com_vgnmTMLA.append(float(bbgnmTMLA.real))       
+            abgnmTME = gnmTME(na, ma, r0, phi0, dz)
+            # #print("Valor de gnmTME para n = ", dz, " , ", abgnmTME)
+            vgnmTME2.append(float(abgnmTME.real))
+            #com_vgnmTME.append(float(bbgnmTME.real))                 
+#            abgnmTMLAV = gnmTMLAV(na, ma, r0, phi0, dz)
+#            vgnmTMLAV2.append(float(abgnmTMLAV.real))
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+        #fig = plt.figure(figsize=(7,5.25))
+        ##axes = plt.gca()
+        #axes.set_xlim([0,20*constants.micro+0.5*constants.micro])
+        #ticks = axes.get_xticks()*10**6
+        #axes.set_xticklabels(ticks)
+        #ylim = [float(min(vgnmTMLA)*1.05),float(max(vgnmTMLA)*1.05)]
+        ##axes.set_ylim(ylim)
+        #plt.plot(flin,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(flin,vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(flin,vgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$g^{\pm1,exa}_{n,TM}$', '$g^{\pm1,loc}_{n,TM}$', '$g^{\pm1,locCC}_{n,TM}$'], loc='upper right', fontsize = 16)
+        #plt.legend(['$g^{\pm1,exa}_{n,TM}$', '$g^{\pm1,loc}_{n,TM}$'], loc='upper right', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$z_0 (\mu m)$', fontsize = 16)
+        #plt.ylabel(r'$|g^{\pm1}_{n,TM}|$', fontsize = 16)
+        ## plt.show()
+        #fig = plt.figure(figsize=(7,5.25))
+        ##axes2 = plt.gca()
+        #plt.plot(fstep,vgnmTME2, linestyle='-', color='black', linewidth=1.5, markerfacecolor='w')
+        #plt.plot(fstep,vgnmTMLA2, linestyle='--', color='red', markerfacecolor='w')
+##        plt.plot(fstep,vgnmTMLAV2, linestyle='--', color='blue', markerfacecolor='w')
+        #plt.grid(True)
+        #plt.xlabel(r'$z_0 (mm)$', fontsize = 16)
+        ##plt.ylim(-0.6,0.6)
+        #plt.yticks(np.arange(-0.6,0.59,0.2))
+        #plt.xlim(0.0,0.0025)
+        #ticks = axes.get_xticks()*10**5
+        #axes2.set_xticklabels(ticks)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"z":"[gnmTM(1,±1,0,0,z),gnmTM(1,±1,0,0,z)]"}
+        vetores = dict(zip(flin,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+        titulos2 = {"z":"[gnmTM(1,±1,0,0,z),gnmTM(1,±1,0,0,z)]"}
+        vetores2 = dict(zip(flin,zip(vgnmTME2,vgnmTMLA2)))
+        gerar_arquivo_json('subplot'+'_'+'gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores2, titulos2)
+    elif choice == 10:
+        #tipo = 4
+        #ordem = 4
+        #step = 150
+        startall = timer()
+        ma = 3
+        r0 = 0
+        phi0 = 0
+        z0 = 0
+        vn = []
+        vgnmTMLA = []
+        vgnmTME = []
+        vgnmTMLAV = []
+        step = float(tratar_entrada(sys.argv,"step"))
+        fstep = list(np.linspace(1.001,200,step))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
+        startfor = timer()
+        for dna in fstep:
+            abgnmTMLA = abs(gnmTMLA(dna, ma, r0, phi0, z0))
+            vgnmTMLA.append(float(abgnmTMLA))            
+            abgnmTME = abs(gnmTME(dna, ma, r0, phi0, z0))
+            vgnmTME.append(float(abgnmTME))
+#            abgnmTMLAV = abs(gnmTMLAV(dna, ma, r0, phi0, z0))
+#            vgnmTMLAV.append(float(abgnmTMLA))
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            vn.append(dna)
+        ##axes = plt.gca()
+        #axes.set_xlim([-8,200])
+        testvgnmTME = [x*10**4 for x in vgnmTME]
+        testvgnmTMLA = [x*10**4 for x in vgnmTMLA]
+#        testvgnmTMLAV = [x*10**4 for x in vgnmTMLAV]
+        newvgnmTME = [x*10**5 for x in vgnmTME]
+        newvgnmTMLA = [x*10**5 for x in vgnmTMLA]
+#        newvgnmTMLAV = [x*10**5 for x in vgnmTMLAV]        
+        #ylim = [-0.1,float(max(testvgnmTMLA)*1.05)]
+        ##axes.set_ylim(ylim)
+        #plt.plot(vn,testvgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,testvgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,testvgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$g^{\pm3,exa}_{n,TM}$', '$g^{\pm3,loc}_{n,TM}$', '$g^{\pm3,locCC}_{n,TM}$'], loc='upper right', fontsize = 16)
+        #plt.legend(['$g^{\pm3,exa}_{n,TM}$', '$g^{\pm3,loc}_{n,TM}$'], loc='upper right', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$',fontsize = 16)
+        #plt.ylabel(r'$|g^{\pm3}_{n,TM}(\times10^-4)|$', fontsize = 16)
+        ##a = plt.axes([0.35, 0.62, .25, .25])
+        #plt.plot(vn,newvgnmTME, linestyle='-', color='black')
+        #plt.plot(vn,newvgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,newvgnmTMLAV, linestyle='--', color='blue')
+        #plt.grid(True)
+        #plt.ylabel(r'$(\times10^-5)$',fontsize = 12)
+        ##plt.ylim(0,0.8)
+        #plt.yticks(np.arange(0,0.71,0.1))
+        #plt.xlim(100, 200)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
+        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig3'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+    elif choice == 11:
+        #tipo = 5
+        #ordem = 3
+        #step = 150
+        startall = timer()
+        ma = 2
+        r0 = 0
+        phi0 = 0
+        z0 = 0
+        vn = []
+        vgnmTMLA = []
+        vgnmTME = []
+        vgnmTMLAV = []
+        step = float(tratar_entrada(sys.argv,"step"))
+        fstep = list(np.linspace(1.001,200,step))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
+        startfor = timer()
+        for dna in fstep:
+            abgnmTMLA = abs(gnmTMLA(dna, ma, r0, phi0, z0))
+            vgnmTMLA.append(float(abgnmTMLA)*10**2)            
+            abgnmTME = abs(gnmTME(dna, ma, r0, phi0, z0))
+            vgnmTME.append(float(abgnmTME)*10**2)
+#            abgnmTMLAV = abs(gnmTMLAV(dna, ma, r0, phi0, z0))
+#            vgnmTMLAV.append(float(abgnmTMLAV)*10**2)
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            vn.append(dna)
+        ##axes = plt.gca()
+        #axes.set_xlim([-8,200])
+        #ylim = [-0.025,float(max(vgnmTME)*1.05)]
+        ##axes.set_ylim(ylim)
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,vgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$\mid g^{\pm2,exa}_{n,TM} \mid$', '$\mid g^{\pm2,loc}_{n,TM} \mid$', '$\mid g^{\pm2,locCC}_{n,TM} \mid$'], loc='upper right', fontsize = 16)
+        #plt.legend(['$\mid g^{\pm2,exa}_{n,TM} \mid$', '$\mid g^{\pm2,loc}_{n,TM} \mid$'], loc='upper right', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$',fontsize = 16)
+        #plt.ylabel(r'$\mid g^{\pm2}_{n,TM} \mid(\times10^-2)$', fontsize = 16)
+        ##a = plt.axes([0.31, 0.62, .25, .25])
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(vn,vgnmTMLAV, linestyle='--', color='blue')
+        #plt.grid(True)
+        #plt.ylabel(r'$(\times10^-2)$',fontsize = 12)
+        ##plt.ylim(0,0.08)
+        #plt.yticks(np.arange(0,0.08,0.02))
+        #plt.xlim(100, 200)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"n":"[gnmTME(n,±2,0,0,0),gnmTMLA(n,±2,0,0,0)]"}
+        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig4'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+    elif choice == 12:
+        #tipo 1
+        #ordem = 0
+        #step = 150
+        startall = timer()
+        ma = 0
+        r0 = 50*constants.micro
+        phi0 = 0
+        z0 = 0.3*10**-3
+        vn = []
+        vgnmTME = []
+        vgnmTMLA = []
+        vgnmTMLAV = []
+        step = float(tratar_entrada(sys.argv,"step"))
+        fstep = list(np.linspace(0,1000,step))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
+        startfor = timer()
+        for dna in fstep:
+            abgnmTMLA = abs(gnmTMLA(dna, ma, r0, phi0, z0))
+            # #print("Valor de |gnmTMLA| para n = ", dna, "   |gnmTMLA[",dna,",2,0,0,0]| = ", abgnmTMLA)
+            vgnmTMLA.append(float(abgnmTMLA))            
+            abgnmTME = abs(gnmTME(dna, ma, r0, phi0, z0))
+            # #print("Valor de |gnmTME| para n = ", dna, "   |gnmTME[",dna,",2,0,0,0]| = ", abgnmTME)
+            vgnmTME.append(float(abgnmTME))
+#            abgnmTMLAV = abs(gnmTMLAV(dna, ma, r0, phi0, z0))
+#            vgnmTMLAV.append(float(abgnmTMLAV))            
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            vn.append(dna)
+        ##axes = plt.gca()
+        #axes.set_xlim([-1,1001])
+        #ylim = [0,float(max(sympify(vgnmTMLA))*1.2)]
+        ##axes.set_ylim(ylim)
+        xlin = np.linspace(vn[0],vn[-1],300)
+        smooth_vgnmTME = spline(vn,vgnmTME,xlin)
+        smooth_vgnmTMLA = spline(vn,vgnmTMLA,xlin)
+#        smooth_vgnmTMLAV = spline(vn,vgnmTMLAV,xlin)
+        #plt.plot(xlin,smooth_vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(xlin,smooth_vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(xlin,smooth_vgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$\mid g^{0,exa}_{n,TM} \mid$', '$\mid g^{0,loc}_{n,TM} \mid$', '$\mid g^{0,locCC}_{n,TM} \mid$'], loc='upper left', fontsize = 16)
+        #plt.legend(['$\mid g^{0,exa}_{n,TM} \mid$', '$\mid g^{0,loc}_{n,TM} \mid$'], loc='upper left', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$', fontsize = 16)
+        #plt.ylabel(r'$\mid g^{0}_{n,TM}\mid$', fontsize = 16)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"n":"[gnmTME(n,0,0.00005,0,0.0003),gnmTMLA(n,0,0.00005,0,0.0003)]"}
+        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig5'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+    elif choice == 13:
+        startall = timer()
+        #tipo 1
+        #ordem 0
+        #step 150
+        na = 1
+        ma = 0
+        phi0 = 0
+        z0 = 0.3*10**-3
+        vn = []
+        vgnmTMLA = []
+#        vgnmTMLAV = []
+        vgnmTME = []
+        step = float(tratar_entrada(sys.argv,"step"))
+        fstep = list(np.linspace(0,50*constants.micro,step))
+        # print("r0 range:", step)
+        # print("Vector r0", fstep, "Size:", len(fstep))
+        startfor = timer()
+        for dr in fstep:
+            abgnmTMLA = abs(gnmTMLA(na, ma, dr, phi0, z0))
+            # #print("Valor de |gnmTMLA| para n = ", dr, "   |gnmTMLA[200,0,",dr,",0,0]| = ", abgnmTMLA)
+            vgnmTMLA.append(float(abgnmTMLA.real))     
+            abgnmTME = abs(gnmTME(na, ma, dr, phi0, z0))
+            # #print("Valor de |gnmTME| para n = ", dr, "   |gnmTME[200,0,",dr,",0,0]| = ", abgnmTME)
+            vgnmTME.append(float(abgnmTME.real))     
+#            abgnmTMLAV = abs(gnmTMLAV(na, ma, dr, phi0, z0))
+# #            #print("Valor de |gnmTME| para n = ", dr, "   |gnmTME[200,0,",dr,",0,0]| = ", abgnmTME)
+#            vgnmTMLAV.append(float(abgnmTMLAV.real))       
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            vn.append(dr)
+        ##axes = plt.gca()
+        #axes.set_xlim([-1*constants.micro,50*constants.micro])
+        #ticks = axes.get_xticks()*10**6
+        #axes.set_xticklabels(ticks)
+        #ylim = [-0.0001,float(max(sympify(vgnmTMLA))*1.15)]
+        ##axes.set_ylim(ylim)
+        xlin = np.linspace(vn[0],vn[-1],300)
+        smooth_vgnmTME = spline(vn,vgnmTME,xlin)
+        smooth_vgnmTMLA = spline(vn,vgnmTMLA,xlin)
+#        smooth_vgnmTMLAV = spline(vn,vgnmTMLAV,xlin)
+        #plt.plot(xlin,smooth_vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(xlin,smooth_vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(xlin,smooth_vgnmTMLAV, linestyle='--', color='blue')
+        #plt.legend(['$\mid g^{0,exa}_{1,TM} \mid$', '$\mid g^{0,loc}_{1,TM} \mid$'], loc='upper right', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$\rho_0 (\mu m)$', fontsize = 16)
+        #plt.ylabel(r'$\mid g^{0}_{1,TM}\mid$', fontsize = 16)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"r":"[gnmTME(1,0,r,0,0.0003),gnmTMLA(1,0,r,0,0.0003)]"}
+        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig6'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+    elif choice == 14:
+        startall = timer()
+        #tipo 1
+        #ordem 0
+        #step 150
+        na = 200
+        ma = 0
+        phi0 = 0
+        z0 = 0.3*10**-3
+        vn = []
+        vgnmTMLA = []
+        vgnmTMLAV = []
+        vgnmTME = []
+        step = float(tratar_entrada(sys.argv,"step"))
+        fstep = list(np.linspace(0,50*constants.micro,step))
+        # print("r0 range:", step)
+        # print("Vector r0", fstep, "Size:", len(fstep))
+        startfor = timer()
+        for dr in fstep:
+            abgnmTMLA = abs(gnmTMLA(na, ma, dr, phi0, z0))
+            # #print("Valor de |gnmTMLA| para n = ", dr, "   |gnmTMLA[200,0,",dr,",0,0]| = ", abgnmTMLA)
+            vgnmTMLA.append(float(abgnmTMLA.real))     
+            abgnmTME = abs(gnmTME(na, ma, dr, phi0, z0))
+            # #print("Valor de |gnmTME| para n = ", dr, "   |gnmTME[200,0,",dr,",0,0]| = ", abgnmTME)
+            vgnmTME.append(float(abgnmTME.real))     
+#            abgnmTMLAV = abs(gnmTMLAV(na, ma, dr, phi0, z0))
+# #            #print("Valor de |gnmTME| para n = ", dr, "   |gnmTME[200,0,",dr,",0,0]| = ", abgnmTME)
+#            vgnmTMLAV.append(float(abgnmTMLAV.real))       
+            endfor = timer()
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            vn.append(dr)
+        ##axes = plt.gca()
+        #axes.set_xlim([-1*constants.micro,50*constants.micro*1.02])
+        #ticks = axes.get_xticks()*10**6
+        #axes.set_xticklabels(ticks)
+        #ylim = [-0.01,float(max(sympify(vgnmTMLA))*1.1)]
+        ##axes.set_ylim(ylim)
+        xlin = np.linspace(vn[0],vn[-1],300)
+        smooth_vgnmTME = spline(vn,vgnmTME,xlin)
+        smooth_vgnmTMLA = spline(vn,vgnmTMLA,xlin)
+#        smooth_vgnmTMLAV = spline(vn,vgnmTMLAV,xlin)
+        #plt.plot(xlin,smooth_vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(xlin,smooth_vgnmTMLA, linestyle='--', color='red')
+##        plt.plot(xlin,smooth_vgnmTMLAV, linestyle='--', color='blue')
+##        plt.legend(['$\mid g^{0,exa}_{200,TM} \mid$', '$\mid g^{0,loc}_{200,TM} \mid$', '$\mid g^{0,locCC}_{200,TM} \mid$'], loc='upper left', fontsize = 16)
+        #plt.legend(['$\mid g^{0,exa}_{200,TM} \mid$', '$\mid g^{0,loc}_{200,TM} \mid$'], loc='upper left', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$\rho_0 (\mu m)$', fontsize = 16)
+        #plt.ylabel(r'$\mid g^{0}_{200,TM}\mid$', fontsize = 16)
+        ## plt.show()
+        endall = timer()
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        titulos = {"r":"[gnmTME(200,0,r,0,0.0003),gnmTMLA(200,0,r,0,0.0003)]"}
+        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
+        gerar_arquivo_json('gnm'+'_'+'fig7'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
+    elif choice == 15:
+        vgnmTME = []
+        nlist = [1,2,5,10,25,50,100,200]
+        # print("===============================================")
+        # print("order = 0 e r0 = 0")
+        
+        #Sequential Method
+        starttask1 = timer()
+        for na in nlist:
+            gnmTME_val = gnmTME(na,ordem + 1,0,0,0)
+            vgnmTME.append(gnmTME_val)
+        # print(vgnmTME)
+        endtask1 = timer()
+        
+        #Multiprocessing Method
+        starttask2 = timer()   
+        p = Pool(processes=4)
+        results = [p.apply_async(gnmTME, args=(na,1,0,0,0,)) for na in nlist]
+        output = [p.get() for p in results]
+        p.join()
+        # print(output)
+        endtask2 = timer()
+        
+        mtvgnmTME = []
+        #Multithread Method
+        starttask3 = timer()
+        t = ThreadPool(processes=4)
+        mtvgnmTME = t.map(p_gnmTME, nlist)       
+        t.close()
+        t.join()
+        # print(mtvgnmTME)
+        endtask3 = timer()
+        
+        #Analysing Results
+        rawtask = (endtask1 - starttask1)/60
+        mprocesstask = (endtask2 - starttask2 )/60
+        mthreadtask = (endtask3 - starttask3 )/60
+          
+        # print("Raw Task Performance Time:", rawtask, "minutes")
+        # print("MultiProcessing Task Performance Time:", mprocesstask, "minutes")
+        # print("MultiThread Task Performance Time:", mthreadtask, "minutes")
+        # print("MultiProcessing Task Performance Time Redution:", ((rawtask - mprocesstask) / rawtask )*100, "%")
+        # print("MultiThread Task Performance Time Redution:", ((rawtask - mthreadtask) / rawtask )*100, "%")
+    elif choice == 16:
+        zlist = list(np.linspace(-0.25,0.25,200))
+        
+        
+        #Sequential Method
+        starttask1 = timer()
+        vPsi = []
+        for dz in zlist:
+            Psiz = Psi(localspot,dz*10**(-3),0,0)
+            vPsi.append(Psiz)
+        # print(vPsi)
+        endtask1 = timer()
+        
+        #Multiprocessing Method
+        starttask2 = timer()   
+        p = Pool(processes=4)
+        """resultsPsi = [p.apply_async(Psi, args=(localspot,dz*10**(-3),0,0,)) for dz in zlist]
+        mpvPsi = [p.get() for p in resultsPsi]
+        p.join()
+        # print(mpvPsi)"""
+        def nPsi(z,rho,t,z0):
+            return Psi(rho,z,t,z0)
+        partialPsi = partial(nPsi, rho=localspot, t=0, z0=0)
+        mpvPsi = p.map(partialPsi, zlist)
+        # print(result_list)
+        endtask2 = timer()
+        
+        mtvPsi = []
+        #Multithread Method
+        starttask3 = timer()
+        t = ThreadPool(processes=4)
+        mtvPsi = t.map(partial(Psiz, rho=localspot, t=0, z0=0), zlist)       
+        t.close()
+        t.join()
+        # print(mtvPsi)
+        endtask3 = timer()
+        
+        #Analysing Results
+        rawtask = (endtask1 - starttask1)/60
+        mprocesstask = (endtask2 - starttask2 )/60
+        mthreadtask = (endtask3 - starttask3 )/60
+        
+        # print("Raw Task Performance Time:", rawtask, "minutes")
+        # print("MultiProcessing Task Performance Time:", mprocesstask, "minutes")
+        # print("MultiThread Task Performance Time:", mthreadtask, "minutes")
+        # print("MultiProcessing Task Performance Time Redution:", ((rawtask - mprocesstask) / rawtask )*100, "%")
+        # print("MultiThread Task Performance Time Redution:", ((rawtask - mthreadtask) / rawtask )*100, "%")    
+    elif choice == 17:   
         #tipo = 5
         #ordem = 3
         #step = 1.5
@@ -1468,190 +1877,85 @@ if __name__=="__main__":
         vgnmTME = []
         step = float(tratar_entrada(sys.argv,"step"))
         fstep = np.arange(1.001,200+step,step)
-        print("n range:", step)
-        print("Vector n", fstep, "Size:", len(fstep))
+        # print("n range:", step)
+        # print("Vector n", fstep, "Size:", len(fstep))
         startfor = timer()
         for dna in fstep:
             abgnmTMLA = abs(gnmTMLA(dna, ma, r0, phi0, z0))
-            print("Valor de |gnmTMLA| para n = ", dna, "   |gnmTMLA[",dna,",2,0,0,0]| = ", abgnmTMLA)
-            vgnmTMLA.append(float(abgnmTMLA.real))            
+            vgnmTMLA.append(float(abgnmTMLA.real)*10**2)            
             abgnmTME = abs(gnmTME(dna, ma, r0, phi0, z0))
-            print("Valor de |gnmTME| para n = ", dna, "   |gnmTME[",dna,",2,0,0,0]| = ", abgnmTME)
-            vgnmTME.append(float(abgnmTME.real))            
+            vgnmTME.append(float(abgnmTME.real)*10**2)
             endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vn.append(dna)
-        axes = plt.gca()
-        axes.set_xlim([-2,200*1.01+step])
-        hectovgnmTME = [x*constants.hecto for x in vgnmTME]
-        hectovgnmTMLA = [x*constants.hecto for x in vgnmTMLA]
-        ylim = [float(min(hectovgnmTMLA)*-1),float(max(hectovgnmTMLA)*1.05)]
-        axes.set_ylim(ylim)
-        plt.plot(vn,hectovgnmTMLA, linestyle='-', color='black', linewidth=1.5)
-        plt.plot(vn,hectovgnmTME, linestyle='--', color='red')
-        plt.legend(['gnmTME', 'gnmTMLA'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('n')
-        plt.ylabel('gnmTM(n,2,0,0,0)x(10^-2)')
-        a = plt.axes([.5, 0.35, .25, .25])
-        plt.plot(vn,hectovgnmTMLA, linestyle='-', color='black')
-        plt.plot(vn,hectovgnmTME, linestyle='--', color='red')
-        plt.grid(True)
-        plt.ylabel('(x10^-2)')
-        plt.ylim(0,0.08)
-        plt.yticks(np.arange(0,0.08,0.02))
-        plt.xlim(100, 200)
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([-8,200*1.01+step])
+        #ylim = [-0.025,float(max(vgnmTME)*1.05)]
+        ##axes.set_ylim(ylim)
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+        #plt.legend(['$\mid g^{\pm2,exa}_{n,TM} \mid$', '$\mid g^{\pm2,loc}_{n,TM} \mid$'], loc='upper right', fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$',fontsize = 16)
+        #plt.ylabel(r'$\mid g^{\pm2}_{n,TM} \mid(\times10^-2)$', fontsize = 16)
+        ##a = plt.axes([0.31, 0.62, .25, .25])
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+        #plt.grid(True)
+        #plt.ylabel(r'$(\times10^-2)$',fontsize = 12)
+        ##plt.ylim(0,0.08)
+        #plt.yticks(np.arange(0,0.08,0.02))
+        #plt.xlim(100, 200)
+        ## plt.show()
         titulos = {"n":"[gnmTME(n,±1,0,0,0),gnmTMLA(n,±1,0,0,0)]"}
         vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
         gerar_arquivo_json('gnm'+'_'+'fig2'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos)
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
-    elif choice == 10:
-        #tipo 4
-        #ordem 0
-        #step 0.00000015
-        startall = timer()
-        na = 1
-        ma = 1
-        phi0 = 0
-        r0 = 0
-        vn = []
-        vgnmTMLA = []
-        vgnmTME = []
-        com_vgnmTMLA = []
-        com_vgnmTME = []
-        #step = float(input("r0 range: "))
-        step = float(tratar_entrada(sys.argv, "step"))
-        fstep = np.arange(0,25*constants.micro+step,step)
-        print("z0 range:", step)
-        print("Vector z0", fstep, "Size:", len(fstep))
-        startfor = timer()
-        for dz in fstep:
-            abgnmTMLA = gnmTMLA(na, ma, r0, phi0, dz)
-            bbgnmTMLA = gnmTMLA(na, ma, r0, phi0, dz*constants.kilo)
-            print("Valor de gnmTMLA para n = ", dz, " , ", abgnmTMLA)
-            vgnmTMLA.append(float(abgnmTMLA.real))
-            com_vgnmTMLA.append(float(bbgnmTMLA.real))       
-            abgnmTME = gnmTME(na, ma, r0, phi0, dz)
-            bbgnmTME = gnmTME(na, ma, r0, phi0, dz*constants.kilo)
-            print("Valor de gnmTME para n = ", dz, " , ", abgnmTME)
-            vgnmTME.append(float(abgnmTME.real))
-            com_vgnmTME.append(float(bbgnmTME.real))                 
-            endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
-            vn.append(dz)
-        axes = plt.gca()
-        axes.set_xlim([-0.5*constants.micro,20*constants.micro+0.5*constants.micro])
-        ticks = axes.get_xticks()*10**6
-        axes.set_xticklabels(ticks)
-        ylim = [float(min(vgnmTMLA)*1.05),float(max(vgnmTMLA)*1.05)]
-        axes.set_ylim(ylim)
-        plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
-        plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
-        plt.legend(['gnmTME', 'gnmTMLA'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('z0 (µm)')
-        plt.ylabel('gnmTM(1,±1,0,r0,0)')
-        titulos = {"n":"[gnmTM(1,±1,0,r0,0),gnmTM(1,±1,0,r0,0)]"}
-        vetores = dict(zip(vn,zip(vgnmTME,vgnmTMLA)))
-        gerar_arquivo_json("teste1.txt", vetores, titulos)
-        #a = plt.axes([.15, 0.65, .25, .25])
-        #testvgnmTMLAV = [x*constants.kilo for x in vgnmTMLAV]
-        #plt.plot(vn,sympify(com_vgnmTMLA), linestyle='-', color='black')
-        #plt.plot(vn,sympify(com_vgnmTME), linestyle='--', color='red')
-        #plt.plot(vn,sympify(testvgnmTMLAV), linestyle='--', color='blue')
-        #plt.grid(True)
-        #plt.xlabel('z0 (mm)')
-        #plt.axis('off')
-        plt.show()
-        endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
-    elif choice == 11:
-        startall = timer()
-        #tipo 1
-        #ordem 0
-        #step 0.0000003
-        na = 200
-        ma = 0
-        phi0 = 0
-        z0 = 0.3*10**-3
-        vn = []
-        vgnmTMLA = []
-        #vgnmTMLAV = []
-        vgnmTME = []
-        step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(0,50*constants.micro+step,step)
-        print("r0 range:", step)
-        print("Vector r0", fstep, "Size:", len(fstep))
-        startfor = timer()
-        for dr in fstep:
-            abgnmTMLA = abs(gnmTMLA(na, ma, dr, phi0, z0))
-            print("Valor de |gnmTMLA| para n = ", dr, "   |gnmTMLA[200,0,",dr,",0,0]| = ", abgnmTMLA)
-            vgnmTMLA.append(abgnmTMLA)            
-            abgnmTME = abs(gnmTME(na, ma, dr, phi0, z0))
-            print("Valor de |gnmTME| para n = ", dr, "   |gnmTME[200,0,",dr,",0,0]| = ", abgnmTME)
-            vgnmTME.append(abgnmTME)            
-            endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
-            vn.append(dr)
-        axes = plt.gca()
-        axes.set_xlim([0,50*constants.micro])
-        ticks = axes.get_xticks()*10**6
-        axes.set_xticklabels(ticks)
-        hectovgnmTME = [x for x in vgnmTME]
-        hectovgnmTMLA = [x for x in vgnmTMLA]
-        plt.plot(vn,sympify(hectovgnmTME), linestyle='-', color='black', linewidth=1.5)
-        plt.plot(vn,sympify(hectovgnmTMLA), linestyle='--', color='red')
-        plt.legend(['gnmTME', 'gnmTMLA'], loc='upper left')
-        plt.grid(True)
-        plt.xlabel('r0 (µm)')
-        plt.ylabel('gnmTM(200,0,0,r0,0)')
-        plt.show()
-        endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
-    elif choice == 12:
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")    
+    elif choice == 18:
         #tipo 1
         #ordem = 0
-        #step = 2
+        #step = 200
         startall = timer()
         ma = 1
         r0 = 0
         phi0 = 0
         z0 = 0
         vn = []
-        vgnmTME = []
         vgnmTMLA = []
+        vgnmTME = []
+        vgnmTMLAV = []
         step = float(tratar_entrada(sys.argv,"step"))
-        fstep = np.arange(1.001,400+step,step)
-        print("n range:", step)
-        print("Vector n", fstep, "Size:", len(fstep))
+        fstep = list(np.linspace(1.001,400,step))
+        # print("Vector n", fstep, "Size:", len(fstep))
         startfor = timer()
         for dna in fstep:
-            abgnmTMLA = gnmTMLA(dna, ma, r0, phi0, z0)
-            print("Valor de |gnmTMLA| para n = ", dna, "   |gnmTMLA[",dna,",1,0,0,0]| = ", abgnmTMLA)
-            vgnmTMLA.append(abgnmTMLA)                  
             abgnmTME = gnmTME(dna, ma, r0, phi0, z0)
-            print("Valor de |gnmTME| para n = ", dna, "   |gnmTME[",dna,",1,0,0,0]| = ", abgnmTME)
-            vgnmTME.append(abgnmTME)            
+            vgnmTME.append(float(abgnmTME.real))     
+            abgnmTMLA = gnmTMLA(dna, ma, r0, phi0, z0)
+            vgnmTMLA.append(float(abgnmTMLA.real))      
             endfor = timer()
-            print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
+            # print("Repeatition Performance Time:", (endfor - startfor)/60, "minutes")
             vn.append(dna)
-        axes = plt.gca()
-        axes.set_xlim([0,400+step])
-        ylim = [float(min(sympify(vgnmTMLA))*1.2),float(max(sympify(vgnmTMLA))*1.2)]
-        axes.set_ylim(ylim)
-        plt.plot(vn,sympify(vgnmTME), linestyle='-', color='black', linewidth=1.5)
-        plt.plot(vn,sympify(vgnmTMLA), linestyle='--', color='red')
-        plt.legend(['gnmTME', 'gnmTMLA'], loc='upper right')
-        plt.grid(True)
-        plt.xlabel('n')
-        plt.ylabel('gnmTM(n,±1,0,0,0)')
-        plt.show()
+        ##axes = plt.gca()
+        #axes.set_xlim([0,400])
+        #ylim = [float(min(vgnmTMLA)*1.2),float(max(vgnmTMLA)*1.2)]
+        ##axes.set_ylim(ylim)
+        ##plt.ylim(-0.2, 0.6)
+        #plt.yticks(np.arange(-0.2,0.55,0.2))
+        #plt.xlim(0, 400)
+        #plt.xticks(np.arange(0,401,100))
+        #plt.plot(vn,vgnmTME, linestyle='-', color='black', linewidth=1.5)
+        #plt.plot(vn,vgnmTMLA, linestyle='--', color='red')
+        #plt.legend(['$g^{\pm1,exa}_{n,TM}$', '$g^{\pm1,loc}_{n,TM}$'], loc='upper right',fontsize = 16)
+        #plt.grid(True)
+        #plt.xlabel(r'$n$',fontsize = 16)
+        #plt.ylabel(r'$g^{\pm1}_{n,TM}$',fontsize = 16)
+        ## plt.show()
         endall = timer()
-        print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
+        # print("Repeatition Performance Total Time:", (endall - startall)/60, "minutes")
     elif choice == 0:
-        print("Ok, good bye.")
+        # print("Ok, good bye.")
         time.sleep(1)
         raise SystemExit
     else:

@@ -1,6 +1,10 @@
 <?php
+session_start();
 include'lib.php';
- checklogin();
+if (!isset($_SESSION["user_id"])){
+	setAlert("login.php", 3);		
+	die();
+}
 ?>
 <!DOCTYPE html>
 <html manifest="manifest.appcache">
@@ -25,18 +29,18 @@ include'lib.php';
 	<meta name="msapplication-TileImage" content="img/ico.png">
 	<meta name="msapplication-TileColor" content="#292b2c">
 	
-	<link rel="stylesheet" type="text/css" href="css/tether.min.css">
-	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
-	<link rel="stylesheet" type="text/css" href="css/c3.min.css">
-	<link rel="stylesheet" type="text/css" href="css/estilo.css">
+	<link rel="stylesheet" type="text/css" href="view/css/tether.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/font-awesome.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/c3.min.css">
+	<link rel="stylesheet" type="text/css" href="view/css/estilo.css">
 </head>
 <body class="">
 	<nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse">
 		<button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
-		<a class="navbar-brand f300"  href="#">project_frozen</a>
+		<a class="navbar-brand f300"  href="#"><?php echo $_SESSION["user_name"]?></a>
 
 		<div class="collapse navbar-collapse" id="navbarNav">
 			<ul class="navbar-nav offset-md-8">
@@ -162,14 +166,14 @@ include'lib.php';
 		<span id="foo"></span>
 	</div>
 </body>
-<script type="text/javascript" src="js/jquery.min.js"></script>
-<script type="text/javascript" src="js/tether.min.js"></script>
-<script type="text/javascript" src="js/bootstrap.min.js"></script>
-<script type="text/javascript" src="js/d3.min.js"></script>
-<script type="text/javascript" src="js/c3.min.js"></script>
-<script type="text/javascript" src="js/spin.js"></script>
-<script type="text/javascript" src="js/app.js"></script>
-<script type="text/javascript" src="js/install.js"></script>
+<script type="text/javascript" src="view/js/jquery.min.js"></script>
+<script type="text/javascript" src="view/js/tether.min.js"></script>
+<script type="text/javascript" src="view/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="view/js/d3.min.js"></script>
+<script type="text/javascript" src="view/js/c3.min.js"></script>
+<script type="text/javascript" src="view/js/spin.js"></script>
+<script type="text/javascript" src="view/js/app.js"></script>
+<script type="text/javascript" src="view/js/install.js"></script>
 <script type="text/javascript" src="service-worker.js"></script>
 <script type="text/javascript">
 	// var cont = <?php getLastChart(1); ?>;
@@ -187,7 +191,5 @@ include'lib.php';
 // 		 return dados[0];
 // 	});
 // }
-
-
 </script>
 </html>

@@ -2,17 +2,16 @@
 include'lib.php';
 include 'conn.php';
 if(isset($_POST["senha"]) && isset($_POST["email"])){
-
 	$senha = $_POST["senha"];
-	$login = $_POST["email"];
-
-	$result = mysqli_query($conn,"SELECT * FROM usuarios WHERE login = '$login'");
+	$email = $_POST["email"];
+	$result = mysqli_query($conn,"SELECT * FROM usuario WHERE email = '$email'");
 
 	if ($result->num_rows > 0) {
 		while($row = $result->fetch_assoc()) {
 			if ($senha == $row["senha"]) {
-				setcookie("usuario", "teste", time() + 360 );
-				$_SESSION["usuario"] = $row["id"];
+				// setcookie("usuario", "teste", time() + 360 );
+				$_SESSION["user_id"] = $row["id"];
+				$_SESSION["user_name"] = $row["nome"];
 				header("location: admin.php");
 			}else{
 				setAlert("login.php",2);
@@ -25,6 +24,5 @@ if(isset($_POST["senha"]) && isset($_POST["email"])){
 	setAlert("login.php",1);
 }
 $conn->close();
-
 ?>
 

@@ -4,8 +4,8 @@ function alert($mensagem){
 	echo "<script>".$mensagem."</script>";
 }
 	function setAlert($page, $NumErro){ //Setar Alertas de erro e avisos via Get nas páginas
-		// header("location:".$page."?alert=".$NumErro."");
-		echo "<script>location.href='".$page."?alert=".$NumErro."'</script>";
+		header("location:".$page."?alert=".$NumErro."");
+		// echo "<script>location.href='".$page."?alert=".$NumErro."'</script>";
 }
 
 function getAlert(){  //Verificar erros de acordo com o número
@@ -27,9 +27,11 @@ function getAlert(){  //Verificar erros de acordo com o número
 }
 
 function checkLogin(){ //checar se a sessão que confirma o login foi criada
-	if (!isset($_SESSION["usuario"])){
+	if (!isset($_SESSION["user_id"])){
 		setAlert("login.php", 3);		
 		die();
+	}else{
+		// header("location:admin.php");
 	}
 }
 function getLastChart($opt){
