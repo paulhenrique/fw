@@ -27,22 +27,29 @@ var opts = {
 var target = document.getElementById('foo');
 var spinner = new Spinner(opts).spin(target);
 
-$(".btn-PreviewGraph").on("click", function (e) {
-	e.preventDefault();
-	$(".list-graph").removeClass("active");
-	var location = $(this).attr("href");
-	$(this).children("li").addClass("active");
-	$("#chart").fadeOut("slow");
-	$("#chart").load(location, " #chart").fadeIn("slow");
-	$(".descChart").load(location ," #descChart");
-});
+
 
 $("#processar").on("click", function (e) {
 //	e.preventDefault();
-	$(".view-hidden").fadeIn("slow");
-	$(".view-hidden #foo").fadeIn("slow");
+$(".view-hidden").fadeIn("slow");
+$(".view-hidden #foo").fadeIn("slow");
 });
 $(".view-hidden").on("click", function(){
 	$(".view-hidden").fadeOut("slow");
 	$(".view-hidden #foo").fadeOut("slow");
 });
+
+$(".btn-toggle-menu").on("click", function(){
+	$(".bar-top").toggleClass("position-relative");
+	$(".content-toggle-menu").slideToggle("slow");
+	
+});
+
+	$(".sidebar .tab-cog li a").on("click", function(){
+		$(".sidebar .tab-cog li a").parent().removeClass("active");
+		$(this).parent().addClass("active");
+		var div = $(this).attr("href");
+		div = $(div);
+		$(".tab-content").removeClass("show");
+		div.addClass("show");
+	});
