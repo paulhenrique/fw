@@ -82,7 +82,7 @@ def gerar_arquivo_json(nome_arquivo, matriz, titulos):
     data = json.dumps([titulos, matriz], sort_keys=True, indent=4, separators=(',', ':'))
     print(nome_arquivo)
     global usuario_sistema
-    fd = os.open( usuario_sistema + "/" + nome_arquivo, os.O_RDWR|os.O_CREAT )
+    fd = os.open("../users/"+ usuario_sistema + "/" + nome_arquivo, os.O_RDWR|os.O_CREAT )
     arquivo = os.fdopen(fd, "w+")
     arquivo.write(data)
     arquivo.close()
@@ -1153,7 +1153,7 @@ if __name__=="__main__":
         titulos = {"x(µm)":"Jn(x)"}
         vetores = dict(zip(vX,vBJx))
         print("prexec json")
-        print(gerar_arquivo_json('BesselJ'+'_'+str(10*np.around(np.random.random_sample(), decimals=2))+'_'+str(date.today())+'_'+'r'+str(step)+'.txt', vetores, titulos))
+        gerar_arquivo_json('BesselJ'+'_'+'r'+str(step)+'.txt', vetores, titulos)
 
     elif choice == 2:
         #step = 0.0025
